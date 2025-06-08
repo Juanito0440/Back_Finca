@@ -58,6 +58,35 @@ app.post("/recolectores", (req, res) => {
   });
 });
 
+// Eliminar recolector
+app.delete("/recolectores/:id", (req, res) => {
+  const recolectorId = req.params.id;
+  
+  // Primero verificar si el recolector existe
+  db.query("SELECT * FROM recolectores WHERE id = ?", [recolectorId], (err, results) => {
+    if (err) return res.status(500).json(err);
+    
+    if (results.length === 0) {
+      return res.status(404).json({ message: "Recolector no encontrado" });
+    }
+    
+    // Eliminar primero las recolecciones asociadas (para mantener integridad referencial)
+    db.query("DELETE FROM recolecciones WHERE recolector_id = ?", [recolectorId], (err) => {
+      if (err) return res.status(500).json(err);
+      
+      // Luego eliminar el recolector
+      db.query("DELETE FROM recolectores WHERE id = ?", [recolectorId], (err) => {
+        if (err) return res.status(500).json(err);
+        res.json({ 
+          message: "Recolector y sus recolecciones eliminados exitosamente",
+          id: recolectorId
+        });
+      });
+    });
+  });
+});
+
+
 // Registrar recolecciónes
 app.post("/recolecciones", (req, res) => {
   const { recolector_id, cantidad } = req.body;
@@ -83,6 +112,68 @@ app.put("/recolecciones/:id", (req, res) => {
   db.query("UPDATE recolecciones SET cantidad = ? WHERE id = ?", [cantidad, id], (err) => {
     if (err) return res.status(500).json(err);
     res.json({ message: "Recolección actualizada" });
+  });
+});
+
+//recolecciones totales y pagos
+
+// Obtener total recolectado por cada recolector
+app.get("/recolectores/totales", (req, res) => {
+  const query = `
+    SELECT 
+      r.id,
+      r.nombre,
+      r.telefono,
+      COALESCE(SUM(rec.cantidad), 0) as total_recolectado,
+      COUNT(rec.id) as num_recolecciones
+    FROM recolectores r
+    LEFT JOIN recolecciones rec ON r.id = rec.recolector_id
+    GROUP BY r.id, r.nombre, r.telefono
+    ORDER BY total_recolectado DESC
+  `;
+  
+  db.query(query, (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json(results);
+  });
+});
+
+// Obtener total recolectado por un recolector específico
+app.get("/recolectores/:id/total", (req, res) => {
+  const recolectorId = req.params.id;
+  const query = `
+    SELECT 
+      r.id,
+      r.nombre,
+      r.telefono,
+      COALESCE(SUM(rec.cantidad), 0) as total_recolectado,
+      COUNT(rec.id) as num_recolecciones
+    FROM recolectores r
+    LEFT JOIN recolecciones rec ON r.id = rec.recolector_id
+    WHERE r.id = ?
+    GROUP BY r.id, r.nombre, r.telefono
+  `;
+  
+  db.query(query, [recolectorId], (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json(results[0] || null);
+  });
+});
+
+// Obtener resumen general de todos los recolectores
+app.get("/resumen/general", (req, res) => {
+  const query = `
+    SELECT 
+      COUNT(DISTINCT r.id) as total_recolectores,
+      COALESCE(SUM(rec.cantidad), 0) as total_general_kg,
+      COUNT(rec.id) as total_recolecciones
+    FROM recolectores r
+    LEFT JOIN recolecciones rec ON r.id = rec.recolector_id
+  `;
+  
+  db.query(query, (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json(results[0]);
   });
 });
 
