@@ -45,9 +45,16 @@ app.get("/recolectores", (req, res) => {
 // Crear recolector
 app.post("/recolectores", (req, res) => {
   const { nombre, telefono } = req.body;
-  db.query("INSERT INTO recolectores (nombre, telefono) VALUES (?, ?)", [nombre, telefono], (err) => {
+  db.query("INSERT INTO recolectores (nombre, telefono) VALUES (?, ?)", [nombre, telefono], (err, result) => {
     if (err) return res.status(500).json(err);
-    res.json({ message: "Recolector creado" });
+    
+    // Devolver el ID del recolector recién creado
+    res.json({ 
+      message: "Recolector creado",
+      id: result.insertId,
+      nombre: nombre,
+      telefono: telefono
+    });
   });
 });
 
