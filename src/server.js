@@ -31,7 +31,7 @@ app.post("/recolectores", (req, res) => {
   });
 });
 
-// Registrar recolección
+// Registrar recolecciónes
 app.post("/recolecciones", (req, res) => {
   const { recolector_id, cantidad } = req.body;
   db.query("INSERT INTO recolecciones (recolector_id, cantidad) VALUES (?, ?)", [recolector_id, cantidad], (err) => {
