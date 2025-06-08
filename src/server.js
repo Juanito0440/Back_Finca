@@ -4,9 +4,23 @@ import cors from "cors";
 import mysql from "mysql2";
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: 'https://finca-rouge.vercel.app',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 app.use(express.json());
-
+app.options('*', cors({
+  origin: 'https://finca-rouge.vercel.app',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use((req, res, next) => {
+  console.log('Origin:', req.headers.origin);
+  next();
+});
 //si no funciona, intentar con pool
 const db = mysql.createConnection({
   host: process.env.DB_HOST ,
